@@ -1,0 +1,32 @@
+---
+title: "Report"
+author: "Meena Zora"
+date: "2023-03-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(qtlcharts)
+library(corrgram)
+library(sjPlot)
+```
+
+# Read data story
+```{r}
+
+diabetes = read.csv("diabetes.csv")
+glimpse(diabetes)
+diabetes$Outcome = as.factor(diabetes$Outcome)
+glimpse(diabetes)
+library(ggfortify)
+library(ggplot2)
+dia.aov = lm(Outcome~., data= diabetes)
+autoplot(dia.aov, which= 1:2)
+
+```
+
