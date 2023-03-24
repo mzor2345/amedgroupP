@@ -1,9 +1,18 @@
----
-title: "Report"
 author: "Meena Zora"
 date: "2023-03-22"
 output: html_document
 ---
+
+
+# Sample description and definition of variables
+
+Sample of 763 females over the age of 21 with pima indian heritage. Sample collected on 1990.
+
+Diabetes pedigree function: A function that scores the likelihood of diabetes based on family history.
+Diabetes = 0 = Did not get diabetes
+Diabetes = 1 = Did get diabetes
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -14,19 +23,197 @@ library(ggplot2)
 library(qtlcharts)
 library(corrgram)
 library(sjPlot)
-```
+library(ggpubr)
 
-# Read data story
-```{r}
 
 diabetes = read.csv("diabetes.csv")
 glimpse(diabetes)
-diabetes$Outcome = as.factor(diabetes$Outcome)
+diabetes$Outcome = as.factor(diabetes$Outcome) # Not sure if we need it to act as an integer or factor but for the sake of graphical summary. I will be converting it to a factor. Can change later for statistical analysis
 glimpse(diabetes)
-library(ggfortify)
-library(ggplot2)
-dia.aov = lm(Outcome~., data= diabetes)
-autoplot(dia.aov, which= 1:2)
+
 
 ```
 
+# Exploratory data analysis
+
+## Glucose vs outcome
+
+```{r}
+# Boxplot of glucose and outcome
+
+boxplot1 = diabetes %>% ggplot()+
+  aes(x=Glucose, y= Outcome)|>
+  geom_boxplot()
+boxplot1
+
+```
+Median differs from each other. Individuals with no diabetes appear to have a lower glucose levels than individuals that did get diabetes. The spread is uneven. It appears that glucose will be a significant predictor of diabetes outcome. However, without further statistical analysis we cannot be sure that there is a significant relationship between the 2 variables.
+
+## Pregnancies vs outcome
+```{r}
+# Bargraph of amount of pregnancies vs outcome of pregnancies
+
+bargraph1=diabetes|> group_by(Outcome, Pregnancies)|> count()|>
+  ggplot()+aes(x=Pregnancies, y=n, fill= Outcome)+
+  geom_bar(stat="identity", position="fill")+
+  scale_y_continuous(labels=scales::percent)+
+  labs(y="", x="Amount of times pregnant", fill="Outcome of diabetes")
+```
+Appears that the more amount of pregnancies, the more likely they are to have diabetes. However, we cannot be sure unless we perform further statistical analysis to confirm. Bargraph may not be a good move if there is only one person that has been pregnant 17 times. Can use a boxplot
+
+
+
+## Blood pressure vs outcome
+```{r}
+boxplot2 = diabetes %>% ggplot()+
+  aes(x=BloodPressure, y= Outcome)|>
+  geom_boxplot()
+boxplot2
+
+```
+There appears to be systematic outliers in both boxplots. The spread and median are roughly the same. It does not appear like blood pressure will be a significant predictor of diabetes outcome. But this requires more statistical analysis to confirm. This appears to have equal variances and normality. 
+
+## Skin thickness vs outcome
+```{r}
+boxplot3 = diabetes %>% ggplot()+
+  aes(x=SkinThickness, y= Outcome)|>
+  geom_boxplot()
+boxplot3
+
+```
+Doesnt appear like there is a large difference between skin thickness and the chances of getting diabetes, thus it doesnt appear that skin thickness will be a good predictor of whether or not the individual will getr diabetes. But nothing can be ascertained without further statistical analysis to confirm.
+
+## Insulin vs Diabetes outcome
+```{r}
+boxplot4 = diabetes %>% ggplot()+
+  aes(x=Insulin, y= Outcome)|>
+  geom_boxplot()
+boxplot4
+```
+Seems skewed. Unequal variances. Appears to have differences. May be a significant predictor of diabetes outcome. There are multiple outliers.
+
+##BMI and diabetes outcome
+
+```{r}
+boxplot5 = diabetes %>% ggplot()+
+  aes(x=DiabetesPedigreeFunction, y= Outcome)|>
+  geom_boxplot()
+boxplot5
+
+```
+Need to research what this is
+
+##Age vs outcome
+
+```{r}
+boxplot6 = diabetes %>% ggplot()+
+  aes(x=log(Age), y= Outcome)|>
+  geom_boxplot()
+
+  
+  
+  
+boxplot6
+
+```
+There is a difference in median between those that ended up getting diabetes and those that didnt end up getting diabetes. There appears to be outliers and the distribution is skewed. Outliers disappear when logging it. Not sure if that is the right choice--> Requires more research on method
+
+## All together
+
+```{r}
+
+ggarrange(boxplot1, boxplot2, boxplot3, boxplot4,boxplot5, boxplot6, bargraph1, ncol=2)
+```
+
+# Assumption checkking
+
+Skin thickness, insulin and age are not significant predictors of diabetes. We can remove this from the model. We fail to reject the null hypothesis that Skin thickness, insulin and age are not a significant predictor of diabetes outcomes. For the factors, we reject the null hypothesis that they are not a significant predictor, there is evidence to suggest, at a significance level of 5%, that they are a good predictor of diabetes outcome.
+
+Independence : the observations should not come from repeated measurements or matched data.
+Large sample size: There are 768 observations. the assumptions have been met.
+
+### Checking for multi-collinearity
+```{r}
+cor(diabetes)
+```
+Multicollinearity: There should be no independent variables that are highly correlated with each other. This assumption has not been violated as the highest correaltion is 0.55.
+
+### Linearity of log odds
+```{r}
+
+```
+
+
+
+
+# Model selection
+```{r}
+library(ggfortify)
+library(ggplot2)
+dia.glm = glm(Outcome~., data= diabetes, family=binomial)
+summary(dia.glm)
+
+```
+
+## Reduced model
+```{r}
+dia.glm2 = glm(Outcome~ Pregnancies+ Glucose+ BloodPressure+BMI + DiabetesPedigreeFunction, data= diabetes, family=binomial)
+summary(dia.glm2)
+
+```
+
+# Model interpretation
+```{r}
+library(equatiomatic)
+equatiomatic::extract_eq(dia.glm2, use_coefs = TRUE)
+```
+
+fitted model:
+$$
+\log\left[ \frac { \widehat{P( \operatorname{Outcome} = \operatorname{1} )} }{ 1 - \widehat{P( \operatorname{Outcome} = \operatorname{1} )} } \right] = -7.95 + 0.15(\operatorname{Pregnancies}) + 0.03(\operatorname{Glucose}) - 0.01(\operatorname{BloodPressure}) + 0.08(\operatorname{BMI}) + 0.91(\operatorname{DiabetesPedigreeFunction})
+$$
+# Interpretation of log model--> Make this more interpretable for general audience per the rubric
+
+**Pregnancies:** On average, for each additional pregnancies, the log-odds of getting diabetes is 0.15, holding all other independent variable constant
+**Glucose:** On average, for each unit increase in glucose, the log-odds of getting diabetes is 0.03, holding all other independent variable constant
+**Blood pressure**: on average, for each decrease in blood pressure, the log-odds of getting diabetes is 0.02, holding all othe independent variables constant
+**BMI:** On average, for each unit increase in BMI, the log-odds of getting diabetes is 0.08, holding all other indepdent variable constant
+**DiabetesPedigree function:** For each unit increase in Diabetes Pedigree fiunction, the log-odds of getting diabetes is 0.91, holding all other indpendent variable constant.
+
+# Example for this model; converting to probabilities for an example
+If a women had 3 pregnancies, 148 g of glucose, blood pressure of 72, bmi of 19 and a pedigree function of 0.3. The probability that this individual goes on to develop diabetes is 21%.
+
+```{r}
+new_data = data.frame(Pregnancies = 3, Glucose = 148, BloodPressure = 72, BMI= 19, DiabetesPedigreeFunction=0.3)
+predict(dia.glm2, newdata=new_data, type="response")
+
+```
+
+# Outputting our model coefficients
+```{r}
+tab_model(dia.glm2)
+# I think this transforms it to just odds, and not log-odds. I dont know how to change odds to probabilities. I think changing it to probability will be really good. 
+```
+# Interpretation of model with odds --> 
+
+**Pregnancies:** On average, for 10 additional pregnancies, the log-odds of getting diabetes is 0.15, holding all other independent variable constant
+
+**Glucose:** On average, for a 10 unit increase in glucose, the log-odds of getting diabetes is 0.03, holding all other independent variable constant
+**Blood pressure**: on average, for a 10 unit decrease in blood pressure, the log-odds of getting diabetes is 0.02, holding all othe independent variables constant
+**BMI:** On average, for each unit increase in BMI, the log-odds of getting diabetes is 0.08, holding all other indepdent variable constant
+**DiabetesPedigree function:** For a 10 unit increase in Diabetes Pedigree fiunction, the log-odds of getting diabetes is 0.91, holding all other indpendent variable constant.
+
+
+# DO this FOR ALL MODEL WE CREATE TO SEE WHICH MODEL WAS THE MOST ACCURATE!!!
+# Visualising model coefficients
+```{r}
+plot_model(dia.glm2)
+```
+
+# Evaluating performance of our model --> In sample
+This is the resubstituition error rate
+```{r}
+
+```
+
+# Evaluating performance of our model--> Out sample
